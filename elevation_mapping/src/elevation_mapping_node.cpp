@@ -6,17 +6,22 @@
  *   Institute: ETH Zurich, ANYbotics
  */
 
-#include <ros/ros.h>
+#include "rclcpp/rclcpp.hpp"
 #include "elevation_mapping/ElevationMapping.hpp"
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "elevation_mapping");
-  ros::NodeHandle nodeHandle("~");
-  elevation_mapping::ElevationMapping elevationMap(nodeHandle);
-
-  // Spin
-  ros::AsyncSpinner spinner(nodeHandle.param("num_callback_threads", 1));  // Use n threads
-  spinner.start();
-  ros::waitForShutdown();
+  std::cout << "Starting elevation_mapping_node..." << std::endl;
+  rclcpp::init(argc, argv);
+  std::cout << "rclcpp initialized." << std::endl;
+  rclcpp::executors::MultiThreadedExecutor executor(rclcpp::ExecutorOptions(), 3);
+  std::cout << "Executor created." << std::endl;
+  auto elevation_mapping_node = std::make_shared<elevation_mapping::ElevationMapping>();
+  std::cout << "ElevationMapping node created." << std::endl;
+  elevation_mapping_node->configure();
+  std::cout << "Node configured." << std::endl;
+  executor.add_node(elevation_mapping_node);
+  std::cout << "Node added to executor." << std::endl;
+  executor.spin();
+  rclcpp::shutdown();
   return 0;
 }

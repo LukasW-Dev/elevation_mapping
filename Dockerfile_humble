@@ -1,0 +1,44 @@
+ARG ROS_DISTRO=humble
+FROM ros:${ROS_DISTRO}-ros-base
+
+WORKDIR /root/ws_elevation_mapping
+
+# Copy packages into the workspace
+COPY ./elevation_mapping src/elevation_mapping
+COPY ./elevation_mapping_demos src/elevation_mapping_demos
+
+# Add the Gazebo (Ignition) repository and fix the GPG key issue
+RUN apt-get update && apt-get install -y lsb-release wget gnupg2 curl && \
+    curl -fsSL https://packages.osrfoundation.org/gazebo.key | gpg --dearmor -o /usr/share/keyrings/gazebo-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/gazebo-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" \
+    | tee /etc/apt/sources.list.d/gazebo-stable.list && \
+    apt-get update
+
+# Install required dependencies including ros-gz packages
+RUN apt-get update && apt-get install -y \
+    wget git sudo curl \
+    clang clang-format-14 clang-tidy clang-tools \
+    ros-humble-ros-gz-bridge \
+    ros-humble-ros-gz-sim \
+    ros-humble-ros-gz-interfaces
+
+# Import dependencies using vcs
+RUN vcs import src < src/elevation_mapping/elevation_mapping.repos && \
+    vcs import src < src/elevation_mapping_demos/elevation_mapping_demos.repos
+
+# Source ROS install and install dependencies via rosdep
+RUN . "/opt/ros/${ROS_DISTRO}/setup.sh" && \
+    rosdep update && \
+    rosdep install --from-paths src --ignore-src -y --rosdistro ${ROS_DISTRO}
+
+# Build the workspace with colcon
+RUN . "/opt/ros/${ROS_DISTRO}/setup.sh" && \
+    colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+
+# Ensure environment variables are properly set
+RUN echo '. /opt/ros/${ROS_DISTRO}/setup.bash' >> /root/.bashrc && \
+    echo '. /root/ws_elevation_mapping/install/setup.bash' >> /root/.bashrc && \
+    echo 'export GZ_SIM_SYSTEM_PLUGIN_PATH=/opt/ros/${ROS_DISTRO}/lib:/usr/lib/x86_64-linux-gnu/ign-gazebo-6/plugins:/root/ws_elevation_mapping/install/leo_gz_plugins/lib' >> /root/.bashrc && \
+    echo 'export GZ_SIM_RESOURCE_PATH=/opt/ros/${ROS_DISTRO}/share:$(ros2 pkg prefix leo_gz_worlds)/share/leo_gz_worlds/worlds:$(ros2 pkg prefix leo_gz_worlds)/share/leo_gz_worlds/models' >> /root/.bashrc
+
+CMD ["bash"]

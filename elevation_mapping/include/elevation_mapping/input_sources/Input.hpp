@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include <XmlRpc.h>
-#include <ros/ros.h>
+#include "rclcpp/rclcpp.hpp"
+#include "rclcpp/qos.hpp"
 #include <string>
 
 #include "elevation_mapping/ThreadSafeDataWrapper.hpp"
@@ -25,14 +25,14 @@ class ElevationMapping;  // Forward declare to avoid cyclic import dependency.
 class Input {
  public:
   template <typename MsgT>
-  using CallbackT = void (ElevationMapping::*)(const boost::shared_ptr<const MsgT>&, bool, const SensorProcessorBase::Ptr&);
+  using CallbackT = void (ElevationMapping::*)(const std::shared_ptr<MsgT>, bool, const SensorProcessorBase::Ptr);
 
   /**
    * @brief Constructor.
-   * @param nh Reference to the nodeHandle of the manager. Used to subscribe
+   * @param node Reference to the nodeHandle of the manager. Used to subscribe
    * to inputs.
    */
-  explicit Input(ros::NodeHandle nh);
+  explicit Input(rclcpp::Node::SharedPtr node);
 
   /**
    * Whether the input source is enabled or not.
@@ -45,21 +45,20 @@ class Input {
   /**
    * @brief Configure the input source.
    * @param name Name of this input source.
-   * @param configuration to configure from.
+   * @param inputSourcesNamespace Namespace under which the input source configuration is located.
    * @param generalSensorProcessorParameters Parameters shared by all sensor processors.
    * @return True if configuring was successful.
    */
-  bool configure(std::string name, const XmlRpc::XmlRpcValue& configuration,
+  bool configure(std::string name, const std::string& inputSourcesNamespace,
                  const SensorProcessorBase::GeneralParameters& generalSensorProcessorParameters);
 
   /**
    * @brief Registers the corresponding callback in the elevationMap.
-   * @param map The map we want to link this input source to.
    * @param callback The callback to use for incoming data.
    * @tparam MsgT The message types of the callback.
    */
   template <typename MsgT>
-  void registerCallback(ElevationMapping& map, CallbackT<MsgT> callback);
+  void registerCallback(CallbackT<MsgT> callback);
 
   /**
    * @return The topic (as absolute path, with renames) that this input
@@ -84,12 +83,11 @@ class Input {
    * processor.
    * @return True if successful.
    */
-  bool configureSensorProcessor(std::string name, const XmlRpc::XmlRpcValue& parameters,
-                                const SensorProcessorBase::GeneralParameters& generalSensorProcessorParameters);
+  bool configureSensorProcessor(const SensorProcessorBase::GeneralParameters& generalSensorProcessorParameters);
 
   // ROS connection.
-  ros::Subscriber subscriber_;
-  ros::NodeHandle nodeHandle_;
+  rclcpp::SubscriptionBase::SharedPtr subscriber_;
+  rclcpp::Node::SharedPtr node_;
 
   //! Sensor processor
   SensorProcessorBase::Ptr sensorProcessor_;
@@ -107,12 +105,15 @@ class Input {
 };
 
 template <typename MsgT>
-void Input::registerCallback(ElevationMapping& map, CallbackT<MsgT> callback) {
+void Input::registerCallback(CallbackT<MsgT> callback) {
   const Parameters parameters{parameters_.getData()};
-  subscriber_ = nodeHandle_.subscribe<MsgT>(
-      parameters.topic_, parameters.queueSize_,
-      std::bind(callback, std::ref(map), std::placeholders::_1, parameters.publishOnUpdate_, std::ref(sensorProcessor_)));
-  ROS_INFO("Subscribing to %s: %s, queue_size: %i.", parameters.type_.c_str(), parameters.topic_.c_str(), parameters.queueSize_);
+
+  rclcpp::QoS qos_settings = rclcpp::QoS(rclcpp::KeepLast(parameters.queueSize_)).best_effort();
+
+  subscriber_ = node_->create_subscription<MsgT>(
+      parameters.topic_, qos_settings,
+      std::bind(callback, node_.get(), std::placeholders::_1, parameters.publishOnUpdate_,sensorProcessor_));
+  RCLCPP_INFO(node_->get_logger(), "Subscribing to %s: %s, queue_size: %i.", parameters.type_.c_str(), parameters.topic_.c_str(), parameters.queueSize_);
 }
 
 }  // namespace elevation_mapping

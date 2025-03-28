@@ -8,9 +8,10 @@
 
 #pragma once
 
-#include <ros/ros.h>
+#include "rclcpp/rclcpp.hpp"
 #include <filters/filter_chain.hpp>
 #include <grid_map_core/GridMap.hpp>
+#include <grid_map_msgs/msg/grid_map.hpp>
 
 // Elevation Mapping
 #include "elevation_mapping/ThreadSafeDataWrapper.hpp"
@@ -24,7 +25,7 @@ namespace elevation_mapping {
  *   ========
  *
  *   // Create the functor, it will configure the postprocessing pipeline from the ros parameters.
- *   PostprocessingPipelineFunctor postprocessor(nodeHandle);
+ *   PostprocessingPipelineFunctor postprocessor(node);
  *
  *   // Call the functor by feeding it some input data. It will postprocess and publish the processed data.
  *   postprocessor(gridMap);
@@ -36,9 +37,9 @@ class PostprocessingPipelineFunctor {
 
   /**
    * @brief Explicit Constructor.
-   * @param nodeHandle The node handle to read parameters from and to publish output data.
+   * @param node The node handle to read parameters from and to publish output data.
    */
-  explicit PostprocessingPipelineFunctor(ros::NodeHandle& nodeHandle);
+  explicit PostprocessingPipelineFunctor(rclcpp::Node::SharedPtr node);
 
   /**
    * @brief Destructor.
@@ -69,11 +70,11 @@ class PostprocessingPipelineFunctor {
   //! @brief Reads in the parameters from the ROS parameter server.
   void readParameters();
 
-  //! ROS nodehandle.
-  ros::NodeHandle& nodeHandle_;
+  //! ROS node.
+  rclcpp::Node::SharedPtr node_;
 
   //! Grid map publisher.
-  ros::Publisher publisher_;
+  rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr publisher_;
 
   //! Filter chain.
   filters::FilterChain<grid_map::GridMap> filterChain_;

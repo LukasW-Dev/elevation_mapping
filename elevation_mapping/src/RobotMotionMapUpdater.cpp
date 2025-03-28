@@ -14,21 +14,22 @@
 
 namespace elevation_mapping {
 
-RobotMotionMapUpdater::RobotMotionMapUpdater(ros::NodeHandle nodeHandle) : nodeHandle_(nodeHandle), covarianceScale_(1.0) {
+RobotMotionMapUpdater::RobotMotionMapUpdater(rclcpp::Node::SharedPtr node) : node_(node), covarianceScale_(1.0) {
   previousReducedCovariance_.setZero();
-  previousUpdateTime_ = ros::Time::now();
+  previousUpdateTime_ = node_->now();
   // TODO(max): How to initialize previousRobotPose_?
 }
 
 RobotMotionMapUpdater::~RobotMotionMapUpdater() = default;
 
 bool RobotMotionMapUpdater::readParameters() {
-  nodeHandle_.param("robot_motion_map_update/covariance_scale", covarianceScale_, 1.0);
+  covarianceScale_ = node_->declare_parameter<double>("robot_motion_map_update/covariance_scale", 1.0);
   return true;
 }
 
-bool RobotMotionMapUpdater::update(ElevationMap& map, const Pose& robotPose, const PoseCovariance& robotPoseCovariance,
-                                   const ros::Time& time) {
+//TODO: Check grid_map examples to see if the map should be a shared pointer
+bool RobotMotionMapUpdater::update(std::shared_ptr<ElevationMap> map, const Pose& robotPose, const PoseCovariance& robotPoseCovariance,
+                                   const rclcpp::Time& time) {
   const PoseCovariance robotPoseCovarianceScaled = covarianceScale_ * robotPoseCovariance;
 
   // Check if update necessary.
@@ -37,7 +38,7 @@ bool RobotMotionMapUpdater::update(ElevationMap& map, const Pose& robotPose, con
   }
 
   // Initialize update data.
-  grid_map::Size size = map.getRawGridMap().getSize();
+  grid_map::Size size = map->getRawGridMap().getSize();
   grid_map::Matrix varianceUpdate(size(0), size(1));  // TODO(max): Make as grid map?
   grid_map::Matrix horizontalVarianceUpdateX(size(0), size(1));
   grid_map::Matrix horizontalVarianceUpdateY(size(0), size(1));
@@ -55,9 +56,9 @@ bool RobotMotionMapUpdater::update(ElevationMap& map, const Pose& robotPose, con
   rotationCovariance(2, 2) = relativeCovariance(3, 3);
 
   // Map to robot pose rotation (R_B_M = R_I_B^T * R_I_M).
-  kindr::RotationMatrixPD mapToRobotRotation = kindr::RotationMatrixPD(robotPose.getRotation().inverted() * map.getPose().getRotation());
+  kindr::RotationMatrixPD mapToRobotRotation = kindr::RotationMatrixPD(robotPose.getRotation().inverted() * map->getPose().getRotation());
   kindr::RotationMatrixPD mapToPreviousRobotRotationInverted =
-      kindr::RotationMatrixPD(previousRobotPose_.getRotation().inverted() * map.getPose().getRotation()).inverted();
+      kindr::RotationMatrixPD(previousRobotPose_.getRotation().inverted() * map->getPose().getRotation()).inverted();
 
   // Translation Jacobian (J_r) (25).
   Eigen::Matrix3d translationJacobian = -mapToRobotRotation.matrix().transpose();
@@ -70,9 +71,9 @@ bool RobotMotionMapUpdater::update(ElevationMap& map, const Pose& robotPose, con
   // Preparation for (25): M_r_BP = R_I_M^T (I_r_I_M - I_r_I_B) + M_r_M_P
   // R_I_M^T (I_r_I_M - I_r_I_B):
   const kindr::Position3D positionRobotToMap =
-      map.getPose().getRotation().inverseRotate(map.getPose().getPosition() - previousRobotPose_.getPosition());
+      map->getPose().getRotation().inverseRotate(map->getPose().getPosition() - previousRobotPose_.getPosition());
 
-  auto& heightLayer = map.getRawGridMap()["elevation"];
+  auto& heightLayer = map->getRawGridMap()["elevation"];
 
   // For each cell in map. // TODO(max): Change to new iterator.
   for (unsigned int i = 0; i < static_cast<unsigned int>(size(0)); ++i) {
@@ -82,7 +83,7 @@ bool RobotMotionMapUpdater::update(ElevationMap& map, const Pose& robotPose, con
       const auto height = heightLayer(i, j);
       if (std::isfinite(height)) {
         grid_map::Position position;
-        map.getRawGridMap().getPosition({i, j}, position);
+        map->getRawGridMap().getPosition({i, j}, position);
         cellPosition = {position.x(), position.y(), height};
 
         // Rotation Jacobian J_R (25)
@@ -108,7 +109,7 @@ bool RobotMotionMapUpdater::update(ElevationMap& map, const Pose& robotPose, con
     }
   }
 
-  map.update(varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY, horizontalVarianceUpdateXY, time);
+  map->update(varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY, horizontalVarianceUpdateXY, time);
   previousReducedCovariance_ = reducedCovariance;
   previousRobotPose_ = robotPose;
   return true;

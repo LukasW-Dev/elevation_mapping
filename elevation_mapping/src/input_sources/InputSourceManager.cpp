@@ -11,45 +11,32 @@
 
 namespace elevation_mapping {
 
-InputSourceManager::InputSourceManager(const ros::NodeHandle& nodeHandle) : nodeHandle_(nodeHandle) {}
+InputSourceManager::InputSourceManager(const rclcpp::Node::SharedPtr node) : node_(node) {}
 
 bool InputSourceManager::configureFromRos(const std::string& inputSourcesNamespace) {
-  XmlRpc::XmlRpcValue inputSourcesConfiguration;
-  if (!nodeHandle_.getParam(inputSourcesNamespace, inputSourcesConfiguration)) {
-    ROS_WARN(
-        "Could not load the input sources configuration from parameter\n "
-        "%s, are you sure it was pushed to the parameter server? Assuming\n "
-        "that you meant to leave it empty. Not subscribing to any inputs!\n",
-        nodeHandle_.resolveName(inputSourcesNamespace).c_str());
-    return false;
-  }
-  return configure(inputSourcesConfiguration, inputSourcesNamespace);
+  node_->declare_parameter<std::vector<std::string>>(inputSourcesNamespace + ".sources");
+  std::vector<std::string> inputSources;
+  if (!node_->get_parameter(inputSourcesNamespace + ".sources", inputSources) || inputSources.empty()) {
+      RCLCPP_WARN(node_->get_logger(), 
+          "No input sources specified. No inputs will be configured.");
+      return false;
+    }
+  return configure(inputSourcesNamespace, inputSources);
 }
 
-bool InputSourceManager::configure(const XmlRpc::XmlRpcValue& config, const std::string& sourceConfigurationName) {
-  if (config.getType() == XmlRpc::XmlRpcValue::TypeArray &&
-      config.size() == 0) {  // Use Empty array as special case to explicitly configure no inputs.
-    return true;
-  }
-
-  if (config.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
-    ROS_ERROR(
-        "%s: The input sources specification must be a struct. but is of "
-        "of XmlRpcType %d",
-        sourceConfigurationName.c_str(), config.getType());
-    ROS_ERROR("The xml passed in is formatted as follows:\n %s", config.toXml().c_str());
-    return false;
-  }
+bool InputSourceManager::configure(const std::string& inputSourcesNamespace, const std::vector<std::string>& inputSources) {
 
   bool successfulConfiguration = true;
+  // TODO: Why not an unordered_set?
   std::set<std::string> subscribedTopics;
-  SensorProcessorBase::GeneralParameters generalSensorProcessorConfig{nodeHandle_.param("robot_base_frame_id", std::string("/robot")),
-                                                                      nodeHandle_.param("map_frame_id", std::string("/map"))};
+  //TODO: Proper error checking for parameters here
+  SensorProcessorBase::GeneralParameters generalSensorProcessorConfig{node_->declare_parameter<std::string>("robot_base_frame_id", "/base_link"),
+                                                                      node_->get_parameter("map_frame_id").as_string()};
   // Configure all input sources in the list.
-  for (const auto& inputConfig : config) {
-    Input source{(ros::NodeHandle(nodeHandle_.resolveName(sourceConfigurationName + "/" + inputConfig.first)))};
+  for (const auto& inputSource : inputSources) {
+    Input source{(node_)};
 
-    const bool configured{source.configure(inputConfig.first, inputConfig.second, generalSensorProcessorConfig)};
+    const bool configured{source.configure( inputSource, inputSourcesNamespace, generalSensorProcessorConfig)};
     if (!configured) {
       successfulConfiguration = false;
       continue;
@@ -65,7 +52,7 @@ bool InputSourceManager::configure(const XmlRpc::XmlRpcValue& config, const std:
     if (topicIsUnique) {
       sources_.push_back(std::move(source));
     } else {
-      ROS_WARN(
+      RCLCPP_WARN(node_->get_logger(), 
           "The input sources specification tried to subscribe to %s "
           "multiple times. Only subscribing once.",
           subscribedTopic.c_str());

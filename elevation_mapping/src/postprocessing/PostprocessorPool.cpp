@@ -10,10 +10,10 @@
 
 namespace elevation_mapping {
 
-PostprocessorPool::PostprocessorPool(std::size_t poolSize, ros::NodeHandle nodeHandle) {
+PostprocessorPool::PostprocessorPool(std::size_t poolSize, rclcpp::Node::SharedPtr node) {
   for (std::size_t i = 0; i < poolSize; ++i) {
     // Add worker to the collection.
-    workers_.emplace_back(std::make_unique<PostprocessingWorker>(nodeHandle));
+    workers_.emplace_back(std::make_unique<PostprocessingWorker>(node));
     // Create one service per thread
     availableServices_.push_back(i);
   }
@@ -27,6 +27,7 @@ PostprocessorPool::~PostprocessorPool() {
 
   // Suppress all exceptions. Try to join every worker thread.
   for (auto& worker : workers_) {
+    // TODO: shouldn't we make sure all the threads join before returning?
     try {
       if (worker->thread().joinable()) {
         worker->thread().join();
@@ -40,7 +41,7 @@ bool PostprocessorPool::runTask(const GridMap& gridMap) {
   // Get an available service id from the shared services pool in a mutually exclusive manner.
   size_t serviceIndex{0};
   {
-    boost::lock_guard<boost::mutex> lock(availableServicesMutex_);
+    boost::lock_guard<std::mutex> lock(availableServicesMutex_);
     if (availableServices_.empty()) {
       return false;
     }
@@ -65,11 +66,11 @@ void PostprocessorPool::wrapTask(size_t serviceIndex) {
   }
   // Suppress all exceptions.
   catch (const std::exception& exception) {
-    ROS_ERROR_STREAM("Postprocessor pipeline, thread " << serviceIndex << " experienced an error: " << exception.what());
+    RCLCPP_ERROR(rclcpp::get_logger("PostprocessorPool"), "Postprocessor pipeline, thread %zu experienced an error: %s", serviceIndex, exception.what());
   }
 
   // Task has finished, so increment count of available threads.
-  boost::unique_lock<boost::mutex> lock(availableServicesMutex_);
+  boost::unique_lock<std::mutex> lock(availableServicesMutex_);
   availableServices_.push_back(serviceIndex);
 }
 

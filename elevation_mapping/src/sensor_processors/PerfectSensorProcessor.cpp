@@ -24,14 +24,15 @@ namespace elevation_mapping {
  * Noiseless, perfect sensor.
  */
 
-PerfectSensorProcessor::PerfectSensorProcessor(ros::NodeHandle& nodeHandle, const SensorProcessorBase::GeneralParameters& generalParameters)
-    : SensorProcessorBase(nodeHandle, generalParameters) {}
+PerfectSensorProcessor::PerfectSensorProcessor(rclcpp::Node::SharedPtr node, const SensorProcessorBase::GeneralParameters& generalParameters)
+    : SensorProcessorBase(node, generalParameters) {}
 
 PerfectSensorProcessor::~PerfectSensorProcessor() = default;
 
-bool PerfectSensorProcessor::readParameters() {
-  return SensorProcessorBase::readParameters();
-}
+// Method gets inherited from SensorProcessorBase.
+// bool PerfectSensorProcessor::readParameters() {
+//   return SensorProcessorBase::readParameters();
+// }
 
 bool PerfectSensorProcessor::computeVariances(const PointCloudType::ConstPtr pointCloud,
                                               const Eigen::Matrix<double, 6, 6>& robotPoseCovariance, Eigen::VectorXf& variances) {

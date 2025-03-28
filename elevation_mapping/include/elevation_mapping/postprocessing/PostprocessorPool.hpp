@@ -37,9 +37,9 @@ class PostprocessorPool {
   /**
    * @brief Constructor.
    * @param poolSize The number of worker threads to allocate.
-   * @param nodeHandle The node handle used to configure the task to run and to publish the finished tasks.
+   * @param node The node handle used to configure the task to run and to publish the finished tasks.
    */
-  PostprocessorPool(std::size_t poolSize, ros::NodeHandle nodeHandle);
+  PostprocessorPool(std::size_t poolSize, rclcpp::Node::SharedPtr node);
 
   /**
    * @brief Destructor.
@@ -74,7 +74,7 @@ class PostprocessorPool {
 
   //! Container holding the service ids which have corresponding threads. The only object that is used in a mutual exclusive manner and must
   //! be protected by availableServicesMutex_.
-  boost::mutex availableServicesMutex_;
+  std::mutex availableServicesMutex_;
   std::deque<size_t> availableServices_;
 };
 
