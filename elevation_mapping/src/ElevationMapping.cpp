@@ -126,41 +126,42 @@ void ElevationMapping::setupSubscribers() {  // Handle deprecated point_cloud_to
 void ElevationMapping::setupServices() {
   const Parameters parameters{parameters_.getData()};
   // Multi-threading for fusion.
-  // fusionTriggerService_ = this->create_service<std_srvs::srv::Empty>(
-  //     "trigger_fusion", 
-  //     std::bind(&ElevationMapping::fuseEntireMapServiceCallback, this, std::placeholders::_1, std::placeholders::_2),
-  //     rclcpp::ServicesQoS(),
-  //     fusionServiceCallbackGroup_);
-
-  // fusedSubmapService_ = this->create_service<grid_map_msgs::srv::GetGridMap>(
-  //     "get_submap", 
-  //     std::bind(&ElevationMapping::getFusedSubmapServiceCallback, this, std::placeholders::_1, std::placeholders::_2),
-  //     rclcpp::ServicesQoS(),
-  //     fusionServiceCallbackGroup_);
-
-  // rawSubmapService_ = this->create_service<grid_map_msgs::srv::GetGridMap>(
-  //     "get_raw_submap", 
-  //     std::bind(&ElevationMapping::getRawSubmapServiceCallback, this, std::placeholders::_1, std::placeholders::_2),
-  //     rclcpp::ServicesQoS(),
-  //     fusionServiceCallbackGroup_);
-
   fusionTriggerService_ = this->create_service<std_srvs::srv::Empty>(
-    "trigger_fusion", 
-    std::bind(&ElevationMapping::fuseEntireMapServiceCallback, this, std::placeholders::_1, std::placeholders::_2),
-    rclcpp::QoS(rclcpp::ServicesQoS()).get_rmw_qos_profile(), // Extract rmw_qos_profile_t
-    fusionServiceCallbackGroup_);
+      "trigger_fusion", 
+      std::bind(&ElevationMapping::fuseEntireMapServiceCallback, this, std::placeholders::_1, std::placeholders::_2),
+      rclcpp::ServicesQoS(),
+      fusionServiceCallbackGroup_);
 
   fusedSubmapService_ = this->create_service<grid_map_msgs::srv::GetGridMap>(
-    "get_submap",
-    std::bind(&ElevationMapping::getFusedSubmapServiceCallback, this, std::placeholders::_1, std::placeholders::_2),
-    rclcpp::QoS(rclcpp::ServicesQoS()).get_rmw_qos_profile(), // Extract rmw_qos_profile_t
-    fusionServiceCallbackGroup_);
+      "get_submap", 
+      std::bind(&ElevationMapping::getFusedSubmapServiceCallback, this, std::placeholders::_1, std::placeholders::_2),
+      rclcpp::ServicesQoS(),
+      fusionServiceCallbackGroup_);
 
   rawSubmapService_ = this->create_service<grid_map_msgs::srv::GetGridMap>(
       "get_raw_submap", 
       std::bind(&ElevationMapping::getRawSubmapServiceCallback, this, std::placeholders::_1, std::placeholders::_2),
-      rclcpp::QoS(rclcpp::ServicesQoS()).get_rmw_qos_profile(), // Extract rmw_qos_profile_t
+      rclcpp::ServicesQoS(),
       fusionServiceCallbackGroup_);
+
+  // For Humble
+  // fusionTriggerService_ = this->create_service<std_srvs::srv::Empty>(
+  //   "trigger_fusion", 
+  //   std::bind(&ElevationMapping::fuseEntireMapServiceCallback, this, std::placeholders::_1, std::placeholders::_2),
+  //   rclcpp::QoS(rclcpp::ServicesQoS()).get_rmw_qos_profile(), // Extract rmw_qos_profile_t
+  //   fusionServiceCallbackGroup_);
+
+  // fusedSubmapService_ = this->create_service<grid_map_msgs::srv::GetGridMap>(
+  //   "get_submap",
+  //   std::bind(&ElevationMapping::getFusedSubmapServiceCallback, this, std::placeholders::_1, std::placeholders::_2),
+  //   rclcpp::QoS(rclcpp::ServicesQoS()).get_rmw_qos_profile(), // Extract rmw_qos_profile_t
+  //   fusionServiceCallbackGroup_);
+
+  // rawSubmapService_ = this->create_service<grid_map_msgs::srv::GetGridMap>(
+  //     "get_raw_submap", 
+  //     std::bind(&ElevationMapping::getRawSubmapServiceCallback, this, std::placeholders::_1, std::placeholders::_2),
+  //     rclcpp::QoS(rclcpp::ServicesQoS()).get_rmw_qos_profile(), // Extract rmw_qos_profile_t
+  //     fusionServiceCallbackGroup_);
 
   clearMapService_ = this->create_service<std_srvs::srv::Empty>(
       "clear_map", std::bind(&ElevationMapping::clearMapServiceCallback, this, std::placeholders::_1, std::placeholders::_2));

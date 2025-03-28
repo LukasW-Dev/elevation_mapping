@@ -39,7 +39,11 @@ RUN vcs import src < src/elevation_mapping/elevation_mapping.repos && \
     rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false && \
     # rm -rf /var/lib/apt/lists/* && \
     # Build the workspace
-    colcon build
+    colcon build && \
+    apt install ros-jazzy-rmw-cyclonedds-cpp -y && \
+    echo '. /opt/ros/${ROS_DISTRO}/setup.bash' >> /root/.bashrc
+
+RUN echo "export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp" >> /root/.bashrc
 
 RUN echo '. /opt/ros/${ROS_DISTRO}/setup.bash' >> /root/.bashrc && \
     echo '. /root/ws_elevation_mapping/install/setup.bash' >> /root/.bashrc && \
