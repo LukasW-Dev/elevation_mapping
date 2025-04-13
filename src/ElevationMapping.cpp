@@ -97,6 +97,7 @@ void ElevationMapping::setupSubscribers() {  // Handle deprecated point_cloud_to
         pointCloudTopic_, 1, [&](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) {pointCloudCallback(msg, true, sensorProcessor_);});
   }*/       
   if (configuredInputSources) {
+    RCLCPP_INFO(nodeHandle_->get_logger(), "There are configured input sources!!!, %d", (int)inputSources_.getNumberOfSources());
     inputSources_.registerCallbacks(*this, std::make_pair("pointcloud", &ElevationMapping::pointCloudCallback));
     // inputSources_.registerCallbacks(*this, std::make_pair("pointcloud", pointCloudCallback));
   } else {
@@ -104,6 +105,7 @@ void ElevationMapping::setupSubscribers() {  // Handle deprecated point_cloud_to
   }
   
   if (!robotPoseTopic_.empty()) {
+    RCLCPP_INFO(nodeHandle_->get_logger(), "Robot Pose Topic: %s", robotPoseTopic_.c_str());
     robotPoseSubscriber_.subscribe(nodeHandle_, robotPoseTopic_,qos_profile);
     robotPoseCache_.connectInput(robotPoseSubscriber_);
     robotPoseCache_.setCacheSize(robotPoseCacheSize_);
@@ -417,15 +419,17 @@ void ElevationMapping::pointCloudCallback(sensor_msgs::msg::PointCloud2::ConstSh
   // Get robot pose covariance matrix at timestamp of point cloud.
   Eigen::Matrix<double, 6, 6> robotPoseCovariance;
   robotPoseCovariance.setZero();
+  ignoreRobotMotionUpdates_ = false;
   if (!ignoreRobotMotionUpdates_) {
     std::shared_ptr<const nav_msgs::msg::Odometry> poseMessage = robotPoseCache_.getElemBeforeTime(lastPointCloudUpdateTime_);
     if (!poseMessage) {
+
       // Tell the user that either for the timestamp no pose is available or that the buffer is possibly empty
       if (robotPoseCache_.getOldestTime().seconds() > lastPointCloudUpdateTime_.seconds()) {
         RCLCPP_ERROR(nodeHandle_->get_logger(), "The oldest pose available is at %f, requested pose at %f", robotPoseCache_.getOldestTime().seconds(),
                   lastPointCloudUpdateTime_.seconds());
       } else {
-        RCLCPP_ERROR(nodeHandle_->get_logger(), "Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.seconds());
+        RCLCPP_ERROR(nodeHandle_->get_logger(), "1: Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.seconds());
       }
       return;
     }
@@ -579,7 +583,7 @@ bool ElevationMapping::updatePrediction(const rclcpp::Time& time) {
       RCLCPP_ERROR(nodeHandle_->get_logger(), "The oldest pose available is at %f, requested pose at %f", robotPoseCache_.getOldestTime().seconds(),
                 lastPointCloudUpdateTime_.seconds());
     } else {
-      RCLCPP_ERROR(nodeHandle_->get_logger(), "Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.seconds());
+      RCLCPP_ERROR(nodeHandle_->get_logger(), "2: Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.seconds());
     }
     return false;
   }

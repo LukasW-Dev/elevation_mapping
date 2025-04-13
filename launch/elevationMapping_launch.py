@@ -12,7 +12,7 @@ def generate_launch_description():
     config_dir = os.path.join(share_dir, 'config')
     xacro_path = os.path.join(config_dir, 'robot.urdf.xacro')
     list_params = []
-    for filee in ["robots/ground_truth_demo.yaml","elevation_maps/long_range.yaml","sensor_processors/realsense_d435.yaml","postprocessing/postprocessor_pipeline.yaml"]:
+    for filee in ["robots/lukas.yaml","sensor_processors/velodyne_HDL-32E.yaml","postprocessing/postprocessor_pipeline.yaml"]:
         list_params.append(os.path.join(config_dir, filee))
         
     return launch.LaunchDescription(
@@ -33,12 +33,12 @@ def generate_launch_description():
             #    'robot_description': launch.substitutions.Command(['xacro', ' ', xacro_path])
             #}]
         #)
-            launch_ros.actions.Node(
-                package= 'rviz2',
-                executable= 'rviz2',
-                name= 'rviz',
-                arguments= ['--display-config', os.path.join(share_dir, 'rviz2', 'custom_rviz2.rviz')],
-                output= 'screen'
-            )
+            # launch_ros.actions.Node(
+            #     package= 'rviz2',
+            #     executable= 'rviz2',
+            #     name= 'rviz',
+            #     arguments= ['--display-config', os.path.join(share_dir, 'rviz2', 'custom_rviz2.rviz')],
+            #     output= 'screen'
+            # )
         ]
     )

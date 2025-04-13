@@ -3,12 +3,12 @@
     inputs: ['ground_truth_cloud']
     ground_truth_cloud: # A name to identify the input source
       type: pointcloud # Supported types: pointcloud
-      topic: /D435i/pointcloud
+      topic: /rgb_cloud
       queue_size: 10
       publish_on_update: true # Whether to publish the elevation map after a callback from this source.
       sensor_processor:
         type: laser
-    map_frame_id: "map"
+    map_frame_id: "seg_grid_map"
     robot_base_frame_id: "base_link"
     robot_pose_with_covariance_topic: "/T265/pose"
     track_point_frame_id: "base_link"
