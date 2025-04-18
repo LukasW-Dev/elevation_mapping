@@ -19,12 +19,12 @@ elevation_mapping:
     min_update_rate: 2.0
     time_tolerance: 1.0
     time_offset_for_point_cloud: 0.0
-    sensor_processor__ignore_points_above: 0.4
+    #sensor_processor__ignore_points_above: 0.4
     robot_motion_map_update__covariance_scale: 0.01
 
     # Map
-    length_in_x: 10.0
-    length_in_y: 10.0
+    length_in_x: 15.0
+    length_in_y: 15.0
     position_x: 0.0
     position_y: 0.0
     resolution: 0.1
