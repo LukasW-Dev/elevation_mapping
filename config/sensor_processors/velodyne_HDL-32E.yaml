@@ -1,7 +1,6 @@
 # Velodyne_HDL-32E
 # TODO
 sensor_processor:
-  ros__parameters:
     type: laser
     min_radius: 0.018
     beam_angle: 0.0006

@@ -5,6 +5,14 @@ elevation_map_fused_visualization:
         type: point_cloud
         params:
           layer: elevation
+      - name: elevation_smooth
+        type: point_cloud
+        params:
+          layer: elevation_smooth
+      - name: elevation_smooth2
+        type: point_cloud
+        params:
+          layer: elevation_smooth2
       - name: upper_bound_cloud
         type: point_cloud
         params:
