@@ -9,8 +9,8 @@ elevation_mapping:
     #robot_motion_map_update/covariance_scale_rotation_x: 0.0
     #robot_motion_map_update/covariance_scale_rotation_y: 0.0
     #robot_motion_map_update/covariance_scale_rotation_z: 0.0
-    length_in_x: 14.0
-    length_in_y: 14.0
+    length_in_x: 15.5
+    length_in_y: 15.5
     position_x: 0.0
     position_y: 0.0
     resolution: 0.1 #0.01

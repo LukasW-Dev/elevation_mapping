@@ -34,9 +34,9 @@ elevation_mapping:
         name: mean_in_radius
         type: gridMapFilters/MeanInRadiusFilter
         params:
-          input_layer: elevation_inpainted
+          input_layer: elevation
           output_layer: elevation_smooth
-          radius: 0.2
+          radius: 0.25
 
       filter3:
         name: mean_in_radius2
